@@ -53,7 +53,9 @@ export default tseslint.config(
             'builtin',
             'external',
             'internal',
-            ['parent', 'sibling', 'index'],
+            'parent',
+            'sibling',
+            'index',
           ],
           pathGroups: [
             { pattern: '@nestjs/**', group: 'external', position: 'before' },
