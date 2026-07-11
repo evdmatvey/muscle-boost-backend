@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { ValidationError } from 'class-validator';
 import { RequestValidationException } from '@/common/exceptions';
 import { formatValidationErrors } from '@/common/utils';
@@ -20,6 +21,15 @@ const bootstrap = async () => {
       },
     }),
   );
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Muscle Boost API')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+
+  SwaggerModule.setup('api/docs', app, document);
 
   const configService = app.get(ConfigService);
   const port = configService.getOrThrow<number>('APP_PORT');
