@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DomainExceptionFilter } from '@/common/filters';
 import { getDatabaseConfig } from '@/config/database.config';
 import { validateEnv } from '@/config/env.validation';
+import { AuthModule } from '@/modules/auth';
 import { UsersModule } from '@/modules/users';
 
 @Module({
@@ -17,6 +18,7 @@ import { UsersModule } from '@/modules/users';
       ...getDatabaseConfig(),
     }),
     UsersModule,
+    AuthModule,
   ],
   providers: [
     {

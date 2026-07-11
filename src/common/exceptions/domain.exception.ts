@@ -5,6 +5,7 @@ export type ErrorDetail = {
 
 export abstract class DomainException extends Error {
   public constructor(
+    public readonly code: string,
     message: string,
     public readonly details?: ErrorDetail[],
   ) {

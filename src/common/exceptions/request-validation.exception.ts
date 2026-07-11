@@ -1,8 +1,13 @@
+import { CommonErrorCode, CommonMessages } from '@/common/messages';
 import type { ErrorDetail } from './domain.exception';
 import { ValidationDomainException } from './validation.domain-exception';
 
 export class RequestValidationException extends ValidationDomainException {
   public constructor(details: ErrorDetail[]) {
-    super('Проверьте введённые данные.', details);
+    super(
+      CommonErrorCode.REQUEST_VALIDATION,
+      CommonMessages[CommonErrorCode.REQUEST_VALIDATION],
+      details,
+    );
   }
 }
