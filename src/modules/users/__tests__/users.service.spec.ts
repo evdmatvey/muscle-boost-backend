@@ -1,4 +1,5 @@
 import { Test, type TestingModule } from '@nestjs/testing';
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { type User } from '../entities/user.entity';
 import { EmailAlreadyInUseException } from '../exceptions/email-already-in-use.exception';
 import { UserNotFoundException } from '../exceptions/user-not-found.exception';
