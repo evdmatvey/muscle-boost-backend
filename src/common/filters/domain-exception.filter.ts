@@ -19,7 +19,7 @@ export class DomainExceptionFilter implements ExceptionFilter {
     response.status(statusCode).json({
       statusCode,
       message: exception.message,
-      error: this.resolveCode(exception),
+      error: exception.code,
       ...(exception.details?.length && { details: exception.details }),
     });
   }
@@ -46,12 +46,5 @@ export class DomainExceptionFilter implements ExceptionFilter {
     }
 
     return 500;
-  }
-
-  private resolveCode(exception: DomainException): string {
-    return exception.name
-      .replace(/Exception$/, '')
-      .replace(/([a-z])([A-Z])/g, '$1_$2')
-      .toUpperCase();
   }
 }
