@@ -3,14 +3,11 @@ import { config } from 'dotenv';
 import type { DataSourceOptions } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import {
-  type EnvironmentVariables,
-  validateEnv,
+  type DatabaseEnvironmentVariables,
+  validateDbEnv,
 } from '@/config/env.validation';
 
-export type DBEnv = Pick<
-  EnvironmentVariables,
-  'DB_HOST' | 'DB_PORT' | 'DB_USER' | 'DB_PASSWORD' | 'DB_NAME'
->;
+export type DBEnv = DatabaseEnvironmentVariables;
 
 type TypeOrmDataSourceOptions = Partial<
   Omit<
@@ -32,7 +29,7 @@ type TypeOrmDataSourceModuleOptions = Partial<
 type TypeOrmAdditionalOptions = TypeOrmDataSourceOptions &
   TypeOrmDataSourceModuleOptions;
 
-const pickDBEnv = (env: Pick<EnvironmentVariables, keyof DBEnv>): DBEnv => {
+const pickDBEnv = (env: DatabaseEnvironmentVariables): DBEnv => {
   return {
     DB_HOST: env.DB_HOST,
     DB_PORT: env.DB_PORT,
@@ -43,9 +40,9 @@ const pickDBEnv = (env: Pick<EnvironmentVariables, keyof DBEnv>): DBEnv => {
 };
 
 const loadValidatedDBEnv = (): DBEnv => {
-  config();
+  config({ quiet: true });
 
-  const env = validateEnv(process.env);
+  const env = validateDbEnv(process.env);
 
   return pickDBEnv(env);
 };
