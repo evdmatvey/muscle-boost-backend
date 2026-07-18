@@ -17,6 +17,7 @@
     "paths": {
       "@/*": ["./src/*"]
     },
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "incremental": true,
     "skipLibCheck": true,
     "strict": true,
