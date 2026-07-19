@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DomainExceptionFilter } from '@/common/filters';
 import { getDatabaseConfig } from '@/config/database.config';
 import { validateEnv } from '@/config/env.validation';
+import { AnalyticsModule } from '@/modules/analytics';
 import { AuthModule } from '@/modules/auth';
 import { ExercisesModule } from '@/modules/exercises';
 import { UserProfilesModule } from '@/modules/user-profiles';
@@ -27,6 +28,7 @@ import { WorkoutSessionsModule } from '@/modules/workout-sessions';
     ExercisesModule,
     WorkoutPlansModule,
     WorkoutSessionsModule,
+    AnalyticsModule,
   ],
   providers: [
     {
