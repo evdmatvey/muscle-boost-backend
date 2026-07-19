@@ -10,7 +10,7 @@ import {
 import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '@/modules/auth/interfaces/authenticated-user.interface';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
-import { UserProfileResponseDto } from './dto/user-profile.response.dto';
+import { UserProfileDataResponseDto } from './dto/user-profile-data.response.dto';
 import { toUserProfileResponse } from './mappers/user-profiles.mapper';
 import { UserProfilesService } from './user-profiles.service';
 
@@ -24,9 +24,11 @@ export class UserProfilesController {
 
   @Get('me')
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiOkResponse({ type: UserProfileResponseDto })
+  @ApiOkResponse({ type: UserProfileDataResponseDto })
   @ApiUnauthorizedResponse({ description: 'Invalid or missing access token' })
-  public async getMe(@CurrentUser() user: AuthenticatedUser) {
+  public async getMe(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<UserProfileDataResponseDto> {
     const { profile, email } = await this._userProfilesService.getMe(
       user.userId,
     );
@@ -36,13 +38,13 @@ export class UserProfilesController {
 
   @Patch('me')
   @ApiOperation({ summary: 'Update current user profile' })
-  @ApiOkResponse({ type: UserProfileResponseDto })
+  @ApiOkResponse({ type: UserProfileDataResponseDto })
   @ApiBadRequestResponse({ description: 'Validation failed' })
   @ApiUnauthorizedResponse({ description: 'Invalid or missing access token' })
   public async updateMe(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateUserProfileDto,
-  ) {
+  ): Promise<UserProfileDataResponseDto> {
     const { profile, email } = await this._userProfilesService.updateMe(
       user.userId,
       dto.displayName,
