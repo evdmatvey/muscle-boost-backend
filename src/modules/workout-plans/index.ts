@@ -5,6 +5,7 @@ export {
   type IWorkoutPlanContext,
 } from './interfaces/workout-plan-context.interface';
 export { PlanExercise, PlanSet } from './submodules';
+export { resolveWorkoutType } from './utils/resolve-workout-type.util';
 export { WorkoutPlansCoreModule } from './workout-plans-core.module';
 export { WorkoutPlansModule } from './workout-plans.module';
 export { WorkoutPlansService } from './workout-plans.service';

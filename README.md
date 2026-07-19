@@ -171,7 +171,7 @@ Each module lives under `src/modules/<module>/` with controllers, services, repo
 | `user-profiles`   | planned                         |
 | `exercises`       | planned                         |
 | `workout-plans`   | planned                         |
-| `workout-sessions`| planned                         |
+| `workout-sessions`| implemented                     |
 | `analytics`       | planned                         |
 
 ## Releases

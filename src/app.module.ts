@@ -10,6 +10,7 @@ import { ExercisesModule } from '@/modules/exercises';
 import { UserProfilesModule } from '@/modules/user-profiles';
 import { UsersModule } from '@/modules/users';
 import { WorkoutPlansModule } from '@/modules/workout-plans';
+import { WorkoutSessionsModule } from '@/modules/workout-sessions';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { WorkoutPlansModule } from '@/modules/workout-plans';
     UserProfilesModule,
     ExercisesModule,
     WorkoutPlansModule,
+    WorkoutSessionsModule,
   ],
   providers: [
     {
