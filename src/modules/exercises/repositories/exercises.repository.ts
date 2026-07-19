@@ -71,4 +71,21 @@ export class ExercisesRepository
 
     return { items, total };
   }
+
+  public async findAccessibleByIds(
+    userId: string,
+    ids: string[],
+  ): Promise<Exercise[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    return this._repository
+      .createQueryBuilder('exercise')
+      .where('exercise.id IN (:...ids)', { ids })
+      .andWhere('(exercise.userId IS NULL OR exercise.userId = :userId)', {
+        userId,
+      })
+      .getMany();
+  }
 }

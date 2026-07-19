@@ -1,0 +1,28 @@
+import type { ValueOf } from '@/common/types';
+
+export const WorkoutType = {
+  LEGS: 'LEGS',
+  ARMS: 'ARMS',
+  CHEST: 'CHEST',
+  BACK: 'BACK',
+  SHOULDERS: 'SHOULDERS',
+  BICEPS: 'BICEPS',
+  TRICEPS: 'TRICEPS',
+  ABS: 'ABS',
+  FOREARMS: 'FOREARMS',
+  CALVES: 'CALVES',
+  GLUTES: 'GLUTES',
+  CHEST_BICEPS: 'CHEST_BICEPS',
+  BACK_TRICEPS: 'BACK_TRICEPS',
+  SHOULDERS_ARMS: 'SHOULDERS_ARMS',
+  LEGS_SHOULDERS: 'LEGS_SHOULDERS',
+  CHEST_BACK: 'CHEST_BACK',
+  BICEPS_TRICEPS: 'BICEPS_TRICEPS',
+  FULL_BODY: 'FULL_BODY',
+  UPPER_BODY: 'UPPER_BODY',
+  LOWER_BODY: 'LOWER_BODY',
+  PUSH: 'PUSH',
+  PULL: 'PULL',
+} as const;
+
+export type WorkoutType = ValueOf<typeof WorkoutType>;

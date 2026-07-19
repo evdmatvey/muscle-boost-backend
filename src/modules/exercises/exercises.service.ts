@@ -65,4 +65,26 @@ export class ExercisesService {
 
     return exercise;
   }
+
+  public async findAccessibleByIds(
+    userId: string,
+    ids: string[],
+  ): Promise<Exercise[]> {
+    const uniqueIds = [...new Set(ids)];
+
+    if (uniqueIds.length === 0) {
+      return [];
+    }
+
+    const exercises = await this._exercisesRepository.findAccessibleByIds(
+      userId,
+      uniqueIds,
+    );
+
+    if (exercises.length !== uniqueIds.length) {
+      throw new ExerciseNotFoundException();
+    }
+
+    return exercises;
+  }
 }

@@ -1,0 +1,12 @@
+import type { ValueOf } from '@/common/types';
+
+export const WorkoutPlansErrorCode = {
+  WORKOUT_PLAN_NOT_FOUND: 'WORKOUT_PLAN_NOT_FOUND',
+  PLAN_EXERCISE_NOT_FOUND: 'PLAN_EXERCISE_NOT_FOUND',
+  PLAN_SET_NOT_FOUND: 'PLAN_SET_NOT_FOUND',
+  EXERCISE_NOT_ACCESSIBLE: 'EXERCISE_NOT_ACCESSIBLE',
+  DUPLICATE_ORDER_INDEX: 'DUPLICATE_ORDER_INDEX',
+  DUPLICATE_SET_NUMBER: 'DUPLICATE_SET_NUMBER',
+} as const;
+
+export type WorkoutPlansErrorCode = ValueOf<typeof WorkoutPlansErrorCode>;

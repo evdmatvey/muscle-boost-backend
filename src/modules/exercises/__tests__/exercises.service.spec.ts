@@ -28,7 +28,10 @@ const createExerciseFixture = (
 describe('ExercisesService', () => {
   let service: ExercisesService;
   let exercisesRepository: jest.Mocked<
-    Pick<IExercisesRepository, 'create' | 'findMany' | 'findById'>
+    Pick<
+      IExercisesRepository,
+      'create' | 'findMany' | 'findById' | 'findAccessibleByIds'
+    >
   >;
 
   beforeEach(async () => {
@@ -36,6 +39,7 @@ describe('ExercisesService', () => {
       create: jest.fn(),
       findMany: jest.fn(),
       findById: jest.fn(),
+      findAccessibleByIds: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -128,6 +132,31 @@ describe('ExercisesService', () => {
       await expect(service.findById('missing-id')).rejects.toBeInstanceOf(
         ExerciseNotFoundException,
       );
+    });
+  });
+
+  describe('findAccessibleByIds', () => {
+    it('returns exercises when all ids are accessible', async () => {
+      const exercise = createExerciseFixture();
+
+      exercisesRepository.findAccessibleByIds.mockResolvedValue([exercise]);
+
+      await expect(
+        service.findAccessibleByIds('user-id', [exercise.id, exercise.id]),
+      ).resolves.toEqual([exercise]);
+
+      expect(exercisesRepository.findAccessibleByIds).toHaveBeenCalledWith(
+        'user-id',
+        [exercise.id],
+      );
+    });
+
+    it('throws when some ids are missing or inaccessible', async () => {
+      exercisesRepository.findAccessibleByIds.mockResolvedValue([]);
+
+      await expect(
+        service.findAccessibleByIds('user-id', ['missing-id']),
+      ).rejects.toBeInstanceOf(ExerciseNotFoundException);
     });
   });
 });

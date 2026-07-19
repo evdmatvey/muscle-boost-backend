@@ -9,6 +9,7 @@ import { AuthModule } from '@/modules/auth';
 import { ExercisesModule } from '@/modules/exercises';
 import { UserProfilesModule } from '@/modules/user-profiles';
 import { UsersModule } from '@/modules/users';
+import { WorkoutPlansModule } from '@/modules/workout-plans';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { UsersModule } from '@/modules/users';
     AuthModule,
     UserProfilesModule,
     ExercisesModule,
+    WorkoutPlansModule,
   ],
   providers: [
     {

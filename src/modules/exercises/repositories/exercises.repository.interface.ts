@@ -25,6 +25,7 @@ export type FindExercisesResult = {
 export interface IExercisesRepository extends IBaseRepository<Exercise> {
   create(dto: CreateExerciseData): Promise<Exercise>;
   findMany(filters: FindExercisesFilters): Promise<FindExercisesResult>;
+  findAccessibleByIds(userId: string, ids: string[]): Promise<Exercise[]>;
 }
 
 export const EXERCISES_REPOSITORY = Symbol('EXERCISES_REPOSITORY');
