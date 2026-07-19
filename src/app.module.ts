@@ -6,6 +6,7 @@ import { DomainExceptionFilter } from '@/common/filters';
 import { getDatabaseConfig } from '@/config/database.config';
 import { validateEnv } from '@/config/env.validation';
 import { AuthModule } from '@/modules/auth';
+import { UserProfilesModule } from '@/modules/user-profiles';
 import { UsersModule } from '@/modules/users';
 
 @Module({
@@ -19,6 +20,7 @@ import { UsersModule } from '@/modules/users';
     }),
     UsersModule,
     AuthModule,
+    UserProfilesModule,
   ],
   providers: [
     {

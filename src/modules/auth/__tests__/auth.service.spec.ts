@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Test as NestTest, type TestingModule } from '@nestjs/testing';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { TokenExpiredError } from 'jsonwebtoken';
+import { UserProfilesService } from '@/modules/user-profiles';
 import { UserNotFoundException, UsersService } from '@/modules/users';
 import { AuthService } from '../auth.service';
 import type { UserSession } from '../entities/user-session.entity';
@@ -45,6 +46,9 @@ const createSessionFixture = (
 describe('AuthService', () => {
   let service: AuthService;
   let usersService: jest.Mocked<Pick<UsersService, 'create' | 'getByEmail'>>;
+  let userProfilesService: jest.Mocked<
+    Pick<UserProfilesService, 'createForUser'>
+  >;
   let userSessionsRepository: jest.Mocked<
     Pick<
       IUserSessionsRepository,
@@ -73,6 +77,10 @@ describe('AuthService', () => {
     usersService = {
       create: jest.fn(),
       getByEmail: jest.fn(),
+    };
+
+    userProfilesService = {
+      createForUser: jest.fn(),
     };
 
     userSessionsRepository = {
@@ -118,6 +126,7 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         { provide: UsersService, useValue: usersService },
+        { provide: UserProfilesService, useValue: userProfilesService },
         {
           provide: USER_SESSIONS_REPOSITORY,
           useValue: userSessionsRepository,
@@ -144,6 +153,14 @@ describe('AuthService', () => {
       const session = createSessionFixture({ refreshTokenHash: '' });
 
       usersService.create.mockResolvedValue(user);
+      userProfilesService.createForUser.mockResolvedValue({
+        id: 'profile-id',
+        userId: user.id,
+        displayName: null,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+        deletedAt: null,
+      });
       userSessionsRepository.create.mockResolvedValue(session);
       userSessionsRepository.save.mockResolvedValue(
         createSessionFixture({ refreshTokenHash: 'refresh-hash' }),
@@ -164,6 +181,7 @@ describe('AuthService', () => {
         email: 'test@example.com',
         passwordHash: 'hashed-password',
       });
+      expect(userProfilesService.createForUser).toHaveBeenCalledWith(user.id);
       expect(userSessionsRepository.create).toHaveBeenCalled();
       expect(userSessionsRepository.save).toHaveBeenCalled();
     });

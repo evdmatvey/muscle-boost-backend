@@ -12,6 +12,7 @@ import {
   JWT_REFRESH_EXPIRES_IN_KEY,
   JWT_REFRESH_SECRET_KEY,
 } from '@/config/jwt.config';
+import { UserProfilesService } from '@/modules/user-profiles';
 import { UserNotFoundException, UsersService } from '@/modules/users';
 import type { UserSession } from './entities/user-session.entity';
 import { InvalidAccessTokenException } from './exceptions/invalid-access-token.exception';
@@ -34,6 +35,7 @@ import { hashRefreshToken } from './utils/refresh-token-hash.util';
 export class AuthService {
   public constructor(
     private readonly _usersService: UsersService,
+    private readonly _userProfilesService: UserProfilesService,
     @Inject(USER_SESSIONS_REPOSITORY)
     private readonly _userSessionsRepository: IUserSessionsRepository,
     private readonly _jwtService: JwtService,
@@ -47,6 +49,7 @@ export class AuthService {
   ): Promise<AuthTokens> {
     const passwordHash = await hashPassword(password);
     const user = await this._usersService.create({ email, passwordHash });
+    await this._userProfilesService.createForUser(user.id);
 
     return this._issueTokens(user.id, parseDeviceName(userAgent));
   }
