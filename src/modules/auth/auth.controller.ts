@@ -23,11 +23,11 @@ import {
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
-import { AuthTokensResponseDto } from './dto/auth-tokens.response.dto';
+import { AuthTokensDataResponseDto } from './dto/auth-tokens-data.response.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { RegisterDto } from './dto/register.dto';
-import { SessionResponseDto } from './dto/session.response.dto';
+import { SessionsDataResponseDto } from './dto/sessions-data.response.dto';
 import type { AuthenticatedUser } from './interfaces/authenticated-user.interface';
 import { toAuthTokensResponse, toSessionResponse } from './mappers/auth.mapper';
 
@@ -39,12 +39,12 @@ export class AuthController {
   @Public()
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
-  @ApiCreatedResponse({ type: AuthTokensResponseDto })
+  @ApiCreatedResponse({ type: AuthTokensDataResponseDto })
   @ApiConflictResponse({ description: 'Email already in use' })
   public async register(
     @Body() dto: RegisterDto,
     @Headers('user-agent') userAgent?: string,
-  ) {
+  ): Promise<AuthTokensDataResponseDto> {
     const tokens = await this._authService.register(
       dto.email,
       dto.password,
@@ -58,12 +58,12 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login' })
-  @ApiOkResponse({ type: AuthTokensResponseDto })
+  @ApiOkResponse({ type: AuthTokensDataResponseDto })
   @ApiUnauthorizedResponse({ description: 'Invalid credentials' })
   public async login(
     @Body() dto: LoginDto,
     @Headers('user-agent') userAgent?: string,
-  ) {
+  ): Promise<AuthTokensDataResponseDto> {
     const tokens = await this._authService.login(
       dto.email,
       dto.password,
@@ -77,9 +77,11 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh tokens' })
-  @ApiOkResponse({ type: AuthTokensResponseDto })
+  @ApiOkResponse({ type: AuthTokensDataResponseDto })
   @ApiUnauthorizedResponse({ description: 'Invalid refresh token' })
-  public async refresh(@Body() dto: RefreshDto) {
+  public async refresh(
+    @Body() dto: RefreshDto,
+  ): Promise<AuthTokensDataResponseDto> {
     const tokens = await this._authService.refresh(dto.refreshToken);
 
     return { data: toAuthTokensResponse(tokens) };
@@ -97,8 +99,10 @@ export class AuthController {
   @Get('sessions')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List active sessions' })
-  @ApiOkResponse({ type: SessionResponseDto, isArray: true })
-  public async getSessions(@CurrentUser() user: AuthenticatedUser) {
+  @ApiOkResponse({ type: SessionsDataResponseDto })
+  public async getSessions(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<SessionsDataResponseDto> {
     const sessions = await this._authService.getSessions(user);
 
     return {
