@@ -6,6 +6,7 @@ const createValidEnv = (): Record<string, unknown> => ({
   APP_PORT: 3000,
   APP_HOST: 'localhost',
   NODE_ENV: 'development',
+  APP_ENV: 'local',
   DB_HOST: 'localhost',
   DB_PORT: 5432,
   DB_USER: 'muscle_boost',
