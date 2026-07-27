@@ -17,6 +17,12 @@ enum NodeEnv {
   Test = 'test',
 }
 
+enum AppEnv {
+  Local = 'local',
+  Staging = 'staging',
+  Production = 'production',
+}
+
 export class DatabaseEnvironmentVariables {
   @IsString()
   @IsNotEmpty()
@@ -58,6 +64,9 @@ export class EnvironmentVariables extends DatabaseEnvironmentVariables {
 
   @IsEnum(NodeEnv)
   public NODE_ENV!: NodeEnv;
+
+  @IsEnum(AppEnv)
+  public APP_ENV!: AppEnv;
 
   @IsString()
   @IsNotEmpty()

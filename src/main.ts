@@ -9,6 +9,7 @@ import { AppModule } from './app.module';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
@@ -22,16 +23,25 @@ const bootstrap = async () => {
     }),
   );
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Muscle Boost API')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  const allowedOrigin = configService.get<string>('ALLOWED_ORIGIN');
 
-  SwaggerModule.setup('api/docs', app, document);
+  if (allowedOrigin) {
+    app.enableCors({ origin: allowedOrigin });
+  }
 
-  const configService = app.get(ConfigService);
+  const appEnv = configService.getOrThrow<string>('APP_ENV');
+
+  if (appEnv !== 'production') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Muscle Boost API')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+
+    SwaggerModule.setup('api/docs', app, document);
+  }
+
   const port = configService.getOrThrow<number>('APP_PORT');
 
   await app.listen(port);

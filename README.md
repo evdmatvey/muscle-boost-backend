@@ -73,20 +73,23 @@ Copy `.env.example` to `.env` and fill in the values:
 
 | Group    | Variables                                                                                    |
 | -------- | -------------------------------------------------------------------------------------------- |
-| App      | `APP_PORT`, `APP_HOST`, `ALLOWED_ORIGIN`, `NODE_ENV`                                         |
+| App      | `APP_PORT`, `APP_HOST`, `ALLOWED_ORIGIN`, `NODE_ENV`, `APP_ENV`                              |
 | Database | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`                                    |
 | JWT      | `JWT_ACCESS_SECRET`, `JWT_ACCESS_EXPIRES_IN`, `JWT_REFRESH_SECRET`, `JWT_REFRESH_EXPIRES_IN` |
 | Auth     | `SESSION_LAST_ONLINE_THRESHOLD_MINUTES`, `REFRESH_ROTATION_GRACE_SECONDS`                    |
 
+`NODE_ENV` — Node/Nest runtime mode (`development` / `production` / `test`).
+`APP_ENV` — product environment (`local` / `staging` / `production`). Swagger is enabled when `APP_ENV` is not `production`.
+
 ### Database
 
-Start PostgreSQL (Docker):
+Start PostgreSQL (Docker, local development):
 
 ```
 pnpm docker:dev:up
 ```
 
-Run migrations:
+Run migrations (local, TypeScript data-source):
 
 ```
 pnpm migration:run
@@ -134,25 +137,81 @@ pnpm build
 pnpm start:prod
 ```
 
+## Docker: staging and production on one VPS
+
+One `Dockerfile` and one `docker-compose.yml`. Staging and production are two Compose projects with separate env files, ports, databases, and volumes.
+
+| Environment | Compose project | Env file          | Example host port | `APP_ENV`    |
+| ----------- | --------------- | ----------------- | ----------------- | ------------ |
+| Local DB    | (dev compose)   | `.env`            | `5432`            | `local`      |
+| Staging     | `mb-staging`    | `.env.staging`    | `3001`            | `staging`    |
+| Production  | `mb-prod`       | `.env.production` | `3000`            | `production` |
+
+Copy examples and fill secrets on the server (files are gitignored):
+
+```
+cp .env.staging.example .env.staging
+cp .env.production.example .env.production
+```
+
+Start / stop:
+
+```
+pnpm docker:staging:up
+pnpm docker:staging:down
+
+pnpm docker:prod:up
+pnpm docker:prod:down
+```
+
+Equivalent raw commands:
+
+```
+docker compose -p mb-staging --env-file .env.staging up -d --build
+docker compose -p mb-prod --env-file .env.production up -d --build
+```
+
+Each stack runs: Postgres -> one-shot migrations -> app. App ports bind to `127.0.0.1` only; expose them via nginx.
+
+Migrations inside the image:
+
+```
+pnpm migration:run:prod
+```
+
+(`node ./node_modules/typeorm/cli.js migration:run -d dist/database/data-source.prod.js`)
+
+### Health checks
+
+| Endpoint                | Purpose                                |
+| ----------------------- | -------------------------------------- |
+| `GET /api/health/live`  | Liveness (no DB); Docker `HEALTHCHECK` |
+| `GET /api/health/ready` | Readiness (PostgreSQL via Terminus)    |
+
+After deploy, wait until `/api/health/ready` returns 200.
+
+Local development still uses `pnpm docker:dev:up` (Postgres only) + `pnpm start:dev`.
+
 ## API overview
 
 - **Type:** REST API
 - **Prefix:** `/api/v1`
 - **Format:** JSON, UTF-8
 - **Auth:** Bearer JWT (access token); refresh token via request body `{ "refreshToken": "..." }`
-- **Swagger UI:** `http://localhost:<APP_PORT>/api/docs`
+- **Swagger UI:** `http://localhost:<APP_PORT>/api/docs` (disabled when `APP_ENV=production`)
+- **Health:** `GET /api/health/live`, `GET /api/health/ready`
 
 ### Endpoints (v0.1.0)
 
-| Method | Path                         | Auth   |
-| ------ | ---------------------------- | ------ |
-| POST   | `/api/v1/auth/register`      | Public |
-| POST   | `/api/v1/auth/login`         | Public |
-| POST   | `/api/v1/auth/refresh`       | Public |
-| POST   | `/api/v1/auth/logout`        | Bearer |
-| GET    | `/api/v1/auth/sessions`      | Bearer |
-| DELETE | `/api/v1/auth/sessions/:id`  | Bearer |
-| DELETE | `/api/v1/auth/sessions`      | Bearer |
+| Method | Path                        | Auth   |
+| ------ | --------------------------- | ------ |
+| POST   | `/api/v1/auth/register`     | Public |
+| POST   | `/api/v1/auth/login`        | Public |
+| POST   | `/api/v1/auth/refresh`      | Public |
+| POST   | `/api/v1/auth/logout`       | Bearer |
+| GET    | `/api/v1/auth/sessions`     | Bearer |
+| DELETE | `/api/v1/auth/sessions/:id` | Bearer |
+| DELETE | `/api/v1/auth/sessions`     | Bearer |
 
 Success responses: `{ "data": T }` or `{ "data": T[], "meta": { "page", "limit", "total" } }`
 
@@ -164,15 +223,15 @@ The `error` field is a stable machine-readable code (e.g. `INVALID_CREDENTIALS`,
 
 Each module lives under `src/modules/<module>/` with controllers, services, repositories, DTOs, and entities.
 
-| Module            | Status                          |
-| ----------------- | ------------------------------- |
-| `auth`            | available (v0.1.0)              |
-| `users`           | internal (no public API)        |
-| `user-profiles`   | planned                         |
-| `exercises`       | planned                         |
-| `workout-plans`   | planned                         |
-| `workout-sessions`| implemented                     |
-| `analytics`       | planned                         |
+| Module             | Status                   |
+| ------------------ | ------------------------ |
+| `auth`             | available (v0.1.0)       |
+| `users`            | internal (no public API) |
+| `user-profiles`    | planned                  |
+| `exercises`        | planned                  |
+| `workout-plans`    | planned                  |
+| `workout-sessions` | implemented              |
+| `analytics`        | planned                  |
 
 ## Releases
 
