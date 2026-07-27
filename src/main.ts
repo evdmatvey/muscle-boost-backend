@@ -3,14 +3,16 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { ValidationError } from 'class-validator';
+import { Logger } from 'nestjs-pino';
 import { RequestValidationException } from '@/common/exceptions';
 import { formatValidationErrors } from '@/common/utils';
 import { AppModule } from './app.module';
 
 const bootstrap = async () => {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
   const configService = app.get(ConfigService);
 
+  app.useLogger(app.get(Logger));
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
     new ValidationPipe({
