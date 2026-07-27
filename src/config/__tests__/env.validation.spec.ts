@@ -44,4 +44,22 @@ describe('validateEnv', () => {
 
     expect(() => validateEnv(env)).toThrow();
   });
+
+  it('accepts optional LOG_LEVEL and defaults when omitted', () => {
+    const env = createValidEnv();
+
+    expect(validateEnv(env).LOG_LEVEL).toBeUndefined();
+
+    env.LOG_LEVEL = 'debug';
+
+    expect(validateEnv(env).LOG_LEVEL).toBe('debug');
+  });
+
+  it('rejects invalid LOG_LEVEL', () => {
+    const env = createValidEnv();
+
+    env.LOG_LEVEL = 'verbose';
+
+    expect(() => validateEnv(env)).toThrow();
+  });
 });

@@ -23,6 +23,16 @@ enum AppEnv {
   Production = 'production',
 }
 
+enum LogLevel {
+  Fatal = 'fatal',
+  Error = 'error',
+  Warn = 'warn',
+  Info = 'info',
+  Debug = 'debug',
+  Trace = 'trace',
+  Silent = 'silent',
+}
+
 export class DatabaseEnvironmentVariables {
   @IsString()
   @IsNotEmpty()
@@ -67,6 +77,10 @@ export class EnvironmentVariables extends DatabaseEnvironmentVariables {
 
   @IsEnum(AppEnv)
   public APP_ENV!: AppEnv;
+
+  @IsEnum(LogLevel)
+  @IsOptional()
+  public LOG_LEVEL?: LogLevel;
 
   @IsString()
   @IsNotEmpty()
