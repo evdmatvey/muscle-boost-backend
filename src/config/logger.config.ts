@@ -55,6 +55,10 @@ export const getLoggerParams = ({
   return {
     pinoHttp: {
       level: logLevel,
+      base: {
+        app: 'muscle-boost-backend',
+        env: appEnv,
+      },
       genReqId: resolveRequestId,
       autoLogging: {
         ignore: (req) => isIgnoredAccessLogPath(req.url ?? ''),
