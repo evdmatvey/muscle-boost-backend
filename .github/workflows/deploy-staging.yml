@@ -1,0 +1,102 @@
+name: Deploy staging
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set image name
+        id: meta
+        run: |
+          IMAGE="${{ env.REGISTRY }}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "tags=${IMAGE}:staging,${IMAGE}:main-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.5
+        env:
+          DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH }}
+          IMAGE: ${{ needs.build-and-push.outputs.image }}:staging
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          command_timeout: 15m
+          envs: DEPLOY_PATH,IMAGE
+          script: |
+            set -euo pipefail
+            DEPLOY_PATH="${DEPLOY_PATH:-/opt/muscle-boost-backend}"
+            APP_PORT="$(grep -E '^APP_PORT=' "${DEPLOY_PATH}/.env.staging" | cut -d= -f2- | tr -d '\r' || true)"
+            APP_PORT="${APP_PORT:-3001}"
+
+            cd "${DEPLOY_PATH}"
+            if [ -d .git ]; then
+              git fetch --ff-only origin main
+              git reset --hard origin/main
+            fi
+
+            export IMAGE
+            docker compose -p mb-staging --env-file .env.staging pull
+            docker compose -p mb-staging --env-file .env.staging up -d --force-recreate --remove-orphans
+
+            for i in $(seq 1 30); do
+              if curl -sf "http://127.0.0.1:${APP_PORT}/api/health/ready" > /dev/null; then
+                echo "Staging is ready"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "Staging readiness check failed"
+            docker compose -p mb-staging --env-file .env.staging ps
+            exit 1
