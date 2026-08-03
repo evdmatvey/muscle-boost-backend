@@ -17,10 +17,7 @@ services:
       - internal
 
   migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: muscle-boost-backend:${APP_ENV:-app}
+    image: ${IMAGE:?Set IMAGE in the env file}
     restart: 'no'
     environment: &app-env
       APP_PORT: ${APP_PORT}
@@ -54,10 +51,7 @@ services:
       - internal
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: muscle-boost-backend:${APP_ENV:-app}
+    image: ${IMAGE:?Set IMAGE in the env file}
     restart: unless-stopped
     environment:
       <<: *app-env

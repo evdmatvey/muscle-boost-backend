@@ -139,27 +139,72 @@ pnpm start:prod
 
 ## Docker: staging and production on one VPS
 
-One `Dockerfile` and one `docker-compose.yml`. Staging and production are two Compose projects with separate env files, ports, databases, and volumes.
+One `Dockerfile` and one `docker-compose.yml`. Staging and production are two Compose projects with separate env files, ports, databases, and volumes. Images are built in GitHub Actions and pulled from GHCR (no build on the server).
 
-| Environment | Compose project | Env file          | Example host port | `APP_ENV`    |
-| ----------- | --------------- | ----------------- | ----------------- | ------------ |
-| Local DB    | (dev compose)   | `.env`            | `5432`            | `local`      |
-| Staging     | `mb-staging`    | `.env.staging`    | `3001`            | `staging`    |
-| Production  | `mb-prod`       | `.env.production` | `3000`            | `production` |
+| Environment | Compose project | Env file          | Example host port | `APP_ENV`    | Image tag        |
+| ----------- | --------------- | ----------------- | ----------------- | ------------ | ---------------- |
+| Local DB    | (dev compose)   | `.env`            | `5432`            | `local`      | —                |
+| Staging     | `mb-staging`    | `.env.staging`    | `3001`            | `staging`    | `:staging`       |
+| Production  | `mb-prod`       | `.env.production` | `3000`            | `production` | `:vX.Y.Z` / `:production` |
 
-Copy examples and fill secrets on the server (files are gitignored):
+### Continuous deployment
+
+| Trigger                         | Workflow              | Target       | GHCR tags                          |
+| ------------------------------- | --------------------- | ------------ | ---------------------------------- |
+| Push / merge to `main`          | `deploy-staging.yml`  | `mb-staging` | `staging`, `main-<sha>`            |
+| GitHub Release published (`v*`) | `deploy-prod.yml`     | `mb-prod`    | `vX.Y.Z`, `production`             |
+
+Pipeline: build image -> push to `ghcr.io/<owner>/<repo>` -> SSH to VPS -> `docker compose pull` + `up -d --force-recreate` → wait for `/api/health/ready`.
+
+Migrations run automatically via the one-shot Compose service `migrate` before `app` starts. `--force-recreate` ensures migrations re-run on every deploy with the new image.
+
+**Public repo note:** the GHCR package is private by default. After the first successful push, set the package visibility to **Public** (Packages → settings) so the VPS can pull without login.
+
+### GitHub configuration
+
+**Secrets** (repository or environment `staging` / `production`):
+
+| Secret           | Purpose                          |
+| ---------------- | -------------------------------- |
+| `VPS_HOST`       | VPS hostname or IP               |
+| `VPS_USER`       | SSH user (deploy, not root)      |
+| `VPS_SSH_KEY`    | Private SSH key for that user    |
+| `VPS_SSH_PORT`   | Optional; defaults to `22`       |
+
+**Variables:**
+
+| Variable          | Purpose                                      |
+| ----------------- | -------------------------------------------- |
+| `VPS_DEPLOY_PATH` | App directory on VPS; default `/opt/muscle-boost-backend` |
+
+Create GitHub Environments `staging` and `production` so deploy jobs can use them (optional protection rules on production).
+
+### Bootstrap VPS (once)
+
+1. Install Docker Engine + Compose plugin, nginx (or Caddy) + TLS, firewall (22/80/443 only).
+2. Create a deploy user in the `docker` group; SSH key auth only.
+3. Clone the repo (or copy `docker-compose.yml`) into `/opt/muscle-boost-backend`.
+4. Copy env examples and fill secrets + `IMAGE`:
 
 ```
 cp .env.staging.example .env.staging
 cp .env.production.example .env.production
+chmod 600 .env.staging .env.production
 ```
 
-Start / stop:
+Set `IMAGE=ghcr.io/<owner>/muscle-boost-backend:staging` (and `:production` for prod). Replace `OWNER` with your GitHub owner (lowercase).
+
+5. Point nginx to `127.0.0.1:3001` (staging) and `127.0.0.1:3000` (prod).
+6. After the first GHCR push and public package visibility: pull and start once manually (or wait for the next CD run).
+
+### Manual start / stop on the server
 
 ```
+pnpm docker:staging:pull
 pnpm docker:staging:up
 pnpm docker:staging:down
 
+pnpm docker:prod:pull
 pnpm docker:prod:up
 pnpm docker:prod:down
 ```
@@ -167,11 +212,14 @@ pnpm docker:prod:down
 Equivalent raw commands:
 
 ```
-docker compose -p mb-staging --env-file .env.staging up -d --build
-docker compose -p mb-prod --env-file .env.production up -d --build
+docker compose -p mb-staging --env-file .env.staging pull
+docker compose -p mb-staging --env-file .env.staging up -d --force-recreate --remove-orphans
+
+docker compose -p mb-prod --env-file .env.production pull
+docker compose -p mb-prod --env-file .env.production up -d --force-recreate --remove-orphans
 ```
 
-Each stack runs: Postgres -> one-shot migrations -> app. App ports bind to `127.0.0.1` only; expose them via nginx.
+Each stack runs: Postgres → one-shot migrations → app. App ports bind to `127.0.0.1` only; expose them via nginx.
 
 Migrations inside the image:
 
