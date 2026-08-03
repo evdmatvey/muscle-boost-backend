@@ -11,6 +11,7 @@ import { AnalyticsModule } from '@/modules/analytics';
 import { AuthModule } from '@/modules/auth';
 import { ExercisesModule } from '@/modules/exercises';
 import { HealthModule } from '@/modules/health';
+import { MetricsModule } from '@/modules/metrics';
 import { UserProfilesModule } from '@/modules/user-profiles';
 import { UsersModule } from '@/modules/users';
 import { WorkoutPlansModule } from '@/modules/workout-plans';
@@ -34,6 +35,7 @@ import { WorkoutSessionsModule } from '@/modules/workout-sessions';
     TypeOrmModule.forRoot({
       ...getDatabaseConfig(),
     }),
+    MetricsModule,
     HealthModule,
     UsersModule,
     AuthModule,
