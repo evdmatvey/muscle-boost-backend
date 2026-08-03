@@ -10,7 +10,11 @@ const SENSITIVE_AUTH_PATHS = [
   '/api/v1/auth/refresh',
 ] as const;
 
-const isHealthPath = (url: string): boolean => url.startsWith('/api/health');
+const isIgnoredAccessLogPath = (url: string): boolean => {
+  const path = url.split('?')[0] ?? url;
+
+  return path === '/metrics' || path.startsWith('/api/health');
+};
 
 const isSensitiveAuthPath = (url: string): boolean => {
   const path = url.split('?')[0] ?? url;
@@ -53,7 +57,7 @@ export const getLoggerParams = ({
       level: logLevel,
       genReqId: resolveRequestId,
       autoLogging: {
-        ignore: (req) => isHealthPath(req.url ?? ''),
+        ignore: (req) => isIgnoredAccessLogPath(req.url ?? ''),
       },
       redact: {
         paths: [

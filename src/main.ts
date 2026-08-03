@@ -1,4 +1,4 @@
-import { ValidationPipe } from '@nestjs/common';
+import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -13,7 +13,9 @@ const bootstrap = async () => {
   const configService = app.get(ConfigService);
 
   app.useLogger(app.get(Logger));
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api', {
+    exclude: [{ path: 'metrics', method: RequestMethod.GET }],
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,

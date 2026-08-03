@@ -44,6 +44,8 @@ flowchart LR
 - class-validator + class-transformer
 - Passport + JWT (@nestjs/jwt, @nestjs/passport)
 - argon2
+- nestjs-pino / Pino
+- prom-client / @willsoto/nestjs-prometheus
 - Jest
 - ESLint + Prettier
 - Husky (pre-commit hooks)
@@ -141,40 +143,40 @@ pnpm start:prod
 
 One `Dockerfile` and one `docker-compose.yml`. Staging and production are two Compose projects with separate env files, ports, databases, and volumes. Images are built in GitHub Actions and pulled from GHCR (no build on the server).
 
-| Environment | Compose project | Env file          | Example host port | `APP_ENV`    | Image tag        |
-| ----------- | --------------- | ----------------- | ----------------- | ------------ | ---------------- |
-| Local DB    | (dev compose)   | `.env`            | `5432`            | `local`      | —                |
-| Staging     | `mb-staging`    | `.env.staging`    | `3001`            | `staging`    | `:staging`       |
+| Environment | Compose project | Env file          | Example host port | `APP_ENV`    | Image tag                 |
+| ----------- | --------------- | ----------------- | ----------------- | ------------ | ------------------------- |
+| Local DB    | (dev compose)   | `.env`            | `5432`            | `local`      | —                         |
+| Staging     | `mb-staging`    | `.env.staging`    | `3001`            | `staging`    | `:staging`                |
 | Production  | `mb-prod`       | `.env.production` | `3000`            | `production` | `:vX.Y.Z` / `:production` |
 
 ### Continuous deployment
 
-| Trigger                         | Workflow              | Target       | GHCR tags                          |
-| ------------------------------- | --------------------- | ------------ | ---------------------------------- |
-| Push / merge to `main`          | `deploy-staging.yml`  | `mb-staging` | `staging`, `main-<sha>`            |
-| GitHub Release published (`v*`) | `deploy-prod.yml`     | `mb-prod`    | `vX.Y.Z`, `production`             |
+| Trigger                         | Workflow             | Target       | GHCR tags               |
+| ------------------------------- | -------------------- | ------------ | ----------------------- |
+| Push / merge to `main`          | `deploy-staging.yml` | `mb-staging` | `staging`, `main-<sha>` |
+| GitHub Release published (`v*`) | `deploy-prod.yml`    | `mb-prod`    | `vX.Y.Z`, `production`  |
 
-Pipeline: build image -> push to `ghcr.io/<owner>/<repo>` -> SSH to VPS -> `docker compose pull` + `up -d --force-recreate` → wait for `/api/health/ready`.
+Pipeline: build image -> push to `ghcr.io/<owner>/<repo>` -> SSH to VPS -> `docker compose pull` + `up -d --force-recreate` -> wait for `/api/health/ready`.
 
 Migrations run automatically via the one-shot Compose service `migrate` before `app` starts. `--force-recreate` ensures migrations re-run on every deploy with the new image.
 
-**Public repo note:** the GHCR package is private by default. After the first successful push, set the package visibility to **Public** (Packages → settings) so the VPS can pull without login.
+**Public repo note:** the GHCR package is private by default. After the first successful push, set the package visibility to **Public** (Packages -> settings) so the VPS can pull without login.
 
 ### GitHub configuration
 
 **Secrets** (repository or environment `staging` / `production`):
 
-| Secret           | Purpose                          |
-| ---------------- | -------------------------------- |
-| `VPS_HOST`       | VPS hostname or IP               |
-| `VPS_USER`       | SSH user (deploy, not root)      |
-| `VPS_SSH_KEY`    | Private SSH key for that user    |
-| `VPS_SSH_PORT`   | Optional; defaults to `22`       |
+| Secret         | Purpose                       |
+| -------------- | ----------------------------- |
+| `VPS_HOST`     | VPS hostname or IP            |
+| `VPS_USER`     | SSH user (deploy, not root)   |
+| `VPS_SSH_KEY`  | Private SSH key for that user |
+| `VPS_SSH_PORT` | Optional; defaults to `22`    |
 
 **Variables:**
 
-| Variable          | Purpose                                      |
-| ----------------- | -------------------------------------------- |
+| Variable          | Purpose                                                   |
+| ----------------- | --------------------------------------------------------- |
 | `VPS_DEPLOY_PATH` | App directory on VPS; default `/opt/muscle-boost-backend` |
 
 Create GitHub Environments `staging` and `production` so deploy jobs can use them (optional protection rules on production).
@@ -219,7 +221,7 @@ docker compose -p mb-prod --env-file .env.production pull
 docker compose -p mb-prod --env-file .env.production up -d --force-recreate --remove-orphans
 ```
 
-Each stack runs: Postgres → one-shot migrations → app. App ports bind to `127.0.0.1` only; expose them via nginx.
+Each stack runs: Postgres -> one-shot migrations -> app. App ports bind to `127.0.0.1` only; expose them via nginx.
 
 Migrations inside the image:
 
@@ -237,6 +239,18 @@ pnpm migration:run:prod
 | `GET /api/health/ready` | Readiness (PostgreSQL via Terminus)    |
 
 After deploy, wait until `/api/health/ready` returns 200.
+
+### Metrics
+
+| Endpoint       | Purpose                                                         |
+| -------------- | --------------------------------------------------------------- |
+| `GET /metrics` | Prometheus exposition (Node.js defaults + HTTP request metrics) |
+
+Scrape from the same host (`127.0.0.1:<APP_PORT>/metrics`). Do **not** expose `/metrics` publicly via nginx — keep it internal like the app port binding.
+
+Collected now: process/heap/CPU/event-loop (`prom-client` defaults), `http_requests_total`, `http_request_duration_seconds` (labels: `method`, `route`, `status_code`; default labels `app`, `env`). Health and `/metrics` itself are excluded from HTTP metrics and access logs.
+
+Grafana dashboards come next (Prometheus scrape -> Grafana); not part of the app image yet.
 
 Local development still uses `pnpm docker:dev:up` (Postgres only) + `pnpm start:dev`.
 
