@@ -2,36 +2,38 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Framework-NestJS-blue?style=flat" alt="Framework-NestJS"/>
-  <img src="https://img.shields.io/badge/Version-0.1.0-purple?style=flat" alt="Version-0.1.0"/>
+  <img src="https://img.shields.io/badge/Version-1.0.0-purple?style=flat" alt="Version-1.0.0"/>
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat" alt="License-MIT"/>
-  <img src="https://img.shields.io/badge/Status-v0.1.0%20(Auth)-orange?style=flat" alt="Status-v0.1.0-Auth"/>
+  <img src="https://img.shields.io/badge/Status-v1.0.0%20(MVP)-orange?style=flat" alt="Status-v1.0.0-MVP"/>
 </p>
 
 ## About
 
 REST API backend for planning strength workouts, logging training sessions, and tracking exercise progress over time. Users can build workout plans, execute them with real set/rep/weight data, browse a training diary, and view analytics on volume and load progression.
 
-**v0.1.0** includes user registration, JWT authentication, and session management. Workout planning and analytics are planned.
+**v1.0.0** is the first client MVP: auth, profiles, exercise catalog, workout plans, training sessions/diary, and analytics — with staging/production deploy and basic observability.
 
 ## Features
 
-### Available in v0.1.0
+### Available in v1.0.0
 
 - **User accounts** — registration, JWT auth (access + refresh tokens), session management
-
-### Planned
-
-- **Workout plans** — exercises, sets, reps, weight, and rest time; muscle group and workout type detection; notes per plan or exercise
-- **Training sessions** — run a plan on a chosen date, log actual performance, skip exercises
-- **Training diary** — calendar of completed workouts, session details, search and filter (e.g. by muscle group)
-- **Progress analytics** — exercise volume per muscle group over time, weight progression per exercise
+- **User profile** — `displayName` and email via `/user-profiles/me`
 - **Exercise catalog** — built-in exercises plus custom user-created entries
-- **User profile** — profile management
+- **Workout plans** — exercises, sets, reps, weight, and rest time; server-computed workout type; notes
+- **Training sessions** — run a plan or ad-hoc session, log actual performance, skip exercises
+- **Training diary** — list/filter completed and in-progress workouts, session details
+- **Progress analytics** — summary, exercise weight/volume progress, muscle-group volume over time
 
 ```mermaid
 flowchart LR
   User --> Auth
   Auth --> Users
+  Auth --> Profiles[user-profiles]
+  Auth --> Exercises
+  Auth --> Plans[workout-plans]
+  Auth --> Sessions[workout-sessions]
+  Sessions --> Analytics
 ```
 
 ## Tech stack
@@ -73,12 +75,12 @@ pnpm install
 
 Copy `.env.example` to `.env` and fill in the values:
 
-| Group    | Variables                                                                                    |
-| -------- | -------------------------------------------------------------------------------------------- |
-| App      | `APP_PORT`, `APP_HOST`, `ALLOWED_ORIGIN`, `NODE_ENV`, `APP_ENV`                              |
-| Database | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`                                    |
-| JWT      | `JWT_ACCESS_SECRET`, `JWT_ACCESS_EXPIRES_IN`, `JWT_REFRESH_SECRET`, `JWT_REFRESH_EXPIRES_IN` |
-| Auth     | `SESSION_LAST_ONLINE_THRESHOLD_MINUTES`, `REFRESH_ROTATION_GRACE_SECONDS`                    |
+| Group    | Variables                                                                                               |
+| -------- | ------------------------------------------------------------------------------------------------------- |
+| App      | `APP_PORT`, `APP_HOST`, `ALLOWED_ORIGIN`, `NODE_ENV`, `APP_ENV`, `LOG_LEVEL`                            |
+| Database | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`                                               |
+| JWT      | `JWT_ACCESS_SECRET`, `JWT_ACCESS_EXPIRES_IN`, `JWT_REFRESH_SECRET`, `JWT_REFRESH_EXPIRES_IN`            |
+| Auth     | `SESSION_LAST_ONLINE_THRESHOLD_MINUTES`, `REFRESH_ROTATION_GRACE_SECONDS`                               |
 
 `NODE_ENV` — Node/Nest runtime mode (`development` / `production` / `test`).
 `APP_ENV` — product environment (`local` / `staging` / `production`). Swagger is enabled when `APP_ENV` is not `production`.
@@ -240,7 +242,7 @@ pnpm migration:run:prod
 
 After deploy, wait until `/api/health/ready` returns 200.
 
-### Metrics
+### Metrics and observability
 
 | Endpoint       | Purpose                                                         |
 | -------------- | --------------------------------------------------------------- |
@@ -250,30 +252,40 @@ Scrape from the same host (`127.0.0.1:<APP_PORT>/metrics`). Do **not** expose `/
 
 Collected now: process/heap/CPU/event-loop (`prom-client` defaults), `http_requests_total`, `http_request_duration_seconds` (labels: `method`, `route`, `status_code`; default labels `app`, `env`). Health and `/metrics` itself are excluded from HTTP metrics and access logs.
 
-Grafana dashboards come next (Prometheus scrape -> Grafana); not part of the app image yet.
+Local observability stack (Grafana, Prometheus, Loki, Promtail):
+
+```
+docker compose -f docker-compose.observability.yml up -d
+```
+
+Overview dashboard is provisioned from `observability/grafana/dashboards/`. Not part of the app image.
 
 Local development still uses `pnpm docker:dev:up` (Postgres only) + `pnpm start:dev`.
 
 ## API overview
 
 - **Type:** REST API
-- **Prefix:** `/api/v1`
+- **Prefix:** `/api/v1` (domain controllers); health at `/api/health/*`
 - **Format:** JSON, UTF-8
 - **Auth:** Bearer JWT (access token); refresh token via request body `{ "refreshToken": "..." }`
 - **Swagger UI:** `http://localhost:<APP_PORT>/api/docs` (disabled when `APP_ENV=production`)
 - **Health:** `GET /api/health/live`, `GET /api/health/ready`
 
-### Endpoints (v0.1.0)
+### Endpoints (v1.0.0 overview)
 
-| Method | Path                        | Auth   |
-| ------ | --------------------------- | ------ |
-| POST   | `/api/v1/auth/register`     | Public |
-| POST   | `/api/v1/auth/login`        | Public |
-| POST   | `/api/v1/auth/refresh`      | Public |
-| POST   | `/api/v1/auth/logout`       | Bearer |
-| GET    | `/api/v1/auth/sessions`     | Bearer |
-| DELETE | `/api/v1/auth/sessions/:id` | Bearer |
-| DELETE | `/api/v1/auth/sessions`     | Bearer |
+Full request/response contracts: Swagger UI or project docs. Nested plan/session CRUD is omitted here for brevity.
+
+| Area             | Methods | Paths (under `/api/v1` unless noted)                                      | Auth   |
+| ---------------- | ------- | ------------------------------------------------------------------------- | ------ |
+| Auth             | POST    | `/auth/register`, `/login`, `/refresh`, `/logout`                         | Mixed  |
+| Sessions         | GET, DELETE | `/auth/sessions`, `/auth/sessions/:id`                                | Bearer |
+| User profiles    | GET, PATCH | `/user-profiles/me`                                                    | Bearer |
+| Exercises        | GET, POST | `/exercises`                                                            | Bearer |
+| Workout plans    | CRUD + nested | `/workout-plans`, `…/exercises`, `…/sets`                           | Bearer |
+| Workout sessions | CRUD + lifecycle + nested | `/workout-sessions`, `…/start|complete|cancel`, `…/exercises`, `…/sets` | Bearer |
+| Analytics        | GET     | `/analytics/summary`, `/exercise-progress`, `/muscle-group-volume`        | Bearer |
+| Health           | GET     | `/api/health/live`, `/api/health/ready`                                   | Public |
+| Metrics          | GET     | `/metrics`                                                                | Public (keep internal) |
 
 Success responses: `{ "data": T }` or `{ "data": T[], "meta": { "page", "limit", "total" } }`
 
@@ -287,17 +299,19 @@ Each module lives under `src/modules/<module>/` with controllers, services, repo
 
 | Module             | Status                   |
 | ------------------ | ------------------------ |
-| `auth`             | available (v0.1.0)       |
+| `auth`             | available                |
 | `users`            | internal (no public API) |
-| `user-profiles`    | planned                  |
-| `exercises`        | planned                  |
-| `workout-plans`    | planned                  |
-| `workout-sessions` | implemented              |
-| `analytics`        | planned                  |
+| `user-profiles`    | available                |
+| `exercises`        | available                |
+| `workout-plans`    | available                |
+| `workout-sessions` | available                |
+| `analytics`        | available                |
+| `health`           | available                |
+| `metrics`          | available                |
 
 ## Releases
 
-See [Releases](https://github.com/evdmatvey/muscle-boost-backend/releases) for version history and setup notes.
+See [CHANGELOG.md](CHANGELOG.md) and [Releases](https://github.com/evdmatvey/muscle-boost-backend/releases) for version history.
 
 ## Developers
 
