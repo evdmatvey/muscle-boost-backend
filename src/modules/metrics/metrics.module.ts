@@ -1,6 +1,9 @@
-import { Module } from '@nestjs/common';
+import {
+  type MiddlewareConsumer,
+  Module,
+  type NestModule,
+} from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_INTERCEPTOR } from '@nestjs/core';
 import {
   PrometheusModule,
   makeCounterProvider,
@@ -11,7 +14,7 @@ import {
   HTTP_REQUESTS_TOTAL,
   HTTP_REQUEST_DURATION_SECONDS,
 } from './http-metrics.constants';
-import { HttpMetricsInterceptor } from './http-metrics.interceptor';
+import { HttpMetricsMiddleware } from './http-metrics.middleware';
 import { MetricsController } from './metrics.controller';
 
 @Module({
@@ -44,11 +47,12 @@ import { MetricsController } from './metrics.controller';
       labelNames: ['method', 'route', 'status_code'],
       buckets: [...HTTP_DURATION_BUCKETS],
     }),
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: HttpMetricsInterceptor,
-    },
+    HttpMetricsMiddleware,
   ],
   exports: [PrometheusModule],
 })
-export class MetricsModule {}
+export class MetricsModule implements NestModule {
+  public configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(HttpMetricsMiddleware).forRoutes('{*splat}');
+  }
+}
