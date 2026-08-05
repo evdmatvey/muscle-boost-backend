@@ -13,10 +13,10 @@ services:
     volumes:
       - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
     networks:
       - obs
+      - staging_internal
+      - prod_internal
 
   loki:
     image: grafana/loki:3.4.2
@@ -70,3 +70,9 @@ volumes:
 networks:
   obs:
     driver: bridge
+  staging_internal:
+    external: true
+    name: mb-staging_internal
+  prod_internal:
+    external: true
+    name: mb-prod_internal
